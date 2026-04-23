@@ -99,5 +99,12 @@ services:
       - ai_prediction_service
       - recommendation_service
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api_gateway
+
 volumes:
   postgres_data:
