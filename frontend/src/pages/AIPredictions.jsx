@@ -6,13 +6,6 @@ import {
 } from 'recharts';
 import { get } from '../utils/api';
 
-const forecastData = [
-  { day: 'Day 1', cashflow: 45000 }, { day: 'Day 5', cashflow: 42000 },
-  { day: 'Day 10', cashflow: 38000 }, { day: 'Day 15', cashflow: 35000 },
-  { day: 'Day 20', cashflow: 28000 }, { day: 'Day 25', cashflow: 22000 },
-  { day: 'Day 30', cashflow: 18000 },
-];
-
 export default function AIPredictions() {
   const [data, setData] = useState({ risk_score: 'Low', days_to_negative: -1, predicted_cashflow_30d: 0 });
   const [cashflow, setCashflow] = useState(null);
@@ -101,7 +94,7 @@ export default function AIPredictions() {
             </div>
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={cashflow?.projections || forecastData}>
+                <LineChart data={cashflow?.projections || []}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />

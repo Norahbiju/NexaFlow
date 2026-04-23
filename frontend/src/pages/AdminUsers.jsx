@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, UserCheck, Calendar } from 'lucide-react';
 import { get } from '../utils/api';
-
-const mockUsers = [
-  { id: 1, full_name: 'Alice Johnson', email: 'alice@techcorp.com', company_name: 'TechCorp Ltd', industry: 'Technology', created_at: '2024-01-15' },
-  { id: 2, full_name: 'Bob Martinez', email: 'bob@financeplus.com', company_name: 'FinancePlus', industry: 'Finance', created_at: '2024-02-03' },
-  { id: 3, full_name: 'Carol Smith', email: 'carol@retail.io', company_name: 'RetailIO', industry: 'Retail', created_at: '2024-02-20' },
-  { id: 4, full_name: 'David Chen', email: 'david@startup.co', company_name: 'StartupCo', industry: 'SaaS', created_at: '2024-03-05' },
-  { id: 5, full_name: 'Emma Wilson', email: 'emma@health.med', company_name: 'HealthMed', industry: 'Healthcare', created_at: '2024-03-18' },
-];
-
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,8 +9,8 @@ export default function AdminUsers() {
   useEffect(() => {
     get('/user/users')
       .then(r => r.ok && r.json())
-      .then(d => setUsers(d && d.length ? d : mockUsers))
-      .catch(() => setUsers(mockUsers))
+      .then(d => setUsers(d || []))
+      .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   }, []);
 

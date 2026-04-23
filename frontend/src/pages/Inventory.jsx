@@ -4,45 +4,57 @@ import { get, post, apiCall } from '../utils/api';
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ name: '', sku: '', cost_price: '', selling_price: '', stock_quantity: '' });
+  const [form, setForm] = useState({ name: '', description: '', cost: '', price: '', stock: '' });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
 
-  const fetchProducts = () =>
-    get('/inventory/inventory')
-      .then(r => r.ok && r.json())
-      .then(d => d && setProducts(d))
-      .catch(() => {});
+  const fetchProducts = async () => {
+    try {
+      const r = await get('/inventory/inventory');
+      if (r.ok) setProducts(await r.json());
+    } catch (e) { setError('Failed to load inventory.'); }
+  };
 
-  useEffect(() => {
-    fetchProducts().finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { fetchProducts().finally(() => setLoading(false)); }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await post('/inventory/inventory', {
-      name: form.name,
-      sku: form.sku || `SKU-${Math.floor(Math.random() * 9000) + 1000}`,
-      cost_price: parseFloat(form.cost_price),
-      selling_price: parseFloat(form.selling_price),
-      stock_quantity: parseInt(form.stock_quantity, 10),
-    });
-    if (res.ok) {
-      await fetchProducts();
-      setForm({ name: '', sku: '', cost_price: '', selling_price: '', stock_quantity: '' });
-      setShowForm(false);
+    setFormError('');
+    try {
+      // Backend expects: name, description, stock, cost, price
+      const res = await post('/inventory/inventory', {
+        name: form.name,
+        description: form.description || null,
+        stock: parseInt(form.stock, 10),
+        cost: parseFloat(form.cost),
+        price: parseFloat(form.price),
+      });
+      if (res.ok) {
+        await fetchProducts();
+        setForm({ name: '', description: '', cost: '', price: '', stock: '' });
+        setShowForm(false);
+      } else {
+        const err = await res.json();
+        setFormError(err.detail || `Error ${res.status}: Failed to add product.`);
+      }
+    } catch (e) {
+      setFormError('Network error. Is the backend running?');
     }
   };
 
   const handleRestock = async (id) => {
-    const res = await apiCall(`/inventory/inventory/${id}/restock`, {
-      method: 'POST',
-      body: JSON.stringify({ quantity: 50, unit_cost: 10.0 }),
-    });
-    if (res.ok) fetchProducts();
+    try {
+      const res = await apiCall(`/inventory/inventory/${id}/restock`, {
+        method: 'POST',
+        body: JSON.stringify({ quantity: 50 }),
+      });
+      if (res.ok) await fetchProducts();
+    } catch (e) {}
   };
 
-  const lowStock = products.filter(p => p.stock_quantity < 20);
+  const lowStock = products.filter(p => p.stock < 20);
 
   return (
     <div className="page-wrapper">
@@ -51,10 +63,12 @@ export default function Inventory() {
           <h1>Inventory Operations</h1>
           <p>Manage stock levels and product catalog.</p>
         </div>
-        <button className="btn" onClick={() => setShowForm(true)} id="add-product-btn">
+        <button className="btn" onClick={() => { setShowForm(true); setFormError(''); }} id="add-product-btn">
           <Plus size={16} /> Add Product
         </button>
       </div>
+
+      {error && <div className="alert-banner">{error}</div>}
 
       {lowStock.length > 0 && (
         <div className="alert-banner">
@@ -74,14 +88,14 @@ export default function Inventory() {
         </div>
         <div className="finance-summary-item">
           <span>Total Units</span>
-          <strong>{products.reduce((a, p) => a + (p.stock_quantity || 0), 0).toLocaleString()}</strong>
+          <strong>{products.reduce((a, p) => a + (p.stock || 0), 0).toLocaleString()}</strong>
         </div>
         <div className="finance-summary-item">
           <span>Avg Margin</span>
           <strong style={{ color: 'var(--success)' }}>
             {products.length > 0
               ? Math.round(products.reduce((a, p) =>
-                a + ((p.selling_price - p.cost_price) / p.selling_price * 100), 0) / products.length)
+                  a + ((p.price - p.cost) / (p.price || 1) * 100), 0) / products.length)
               : 0}%
           </strong>
         </div>
@@ -98,33 +112,29 @@ export default function Inventory() {
           </div>
         ) : (
           <div className="data-table">
-            <div className="table-head" style={{gridTemplateColumns:'1.5fr 1fr 0.8fr 0.8fr 1fr 1fr'}}>
+            <div className="table-head" style={{ gridTemplateColumns: '1.5fr 0.8fr 0.8fr 1fr 1fr' }}>
               <span>Product</span>
-              <span>SKU</span>
               <span>Cost</span>
               <span>Price</span>
               <span>Stock</span>
               <span style={{ textAlign: 'right' }}>Action</span>
             </div>
             {products.map(p => (
-              <div key={p.id} className="table-row" style={{gridTemplateColumns:'1.5fr 1fr 0.8fr 0.8fr 1fr 1fr'}}>
-                <span style={{ fontWeight: 500 }}>{p.name}</span>
-                <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.sku}</span>
-                <span>${p.cost_price?.toFixed(2)}</span>
-                <span>${p.selling_price?.toFixed(2)}</span>
+              <div key={p.id} className="table-row" style={{ gridTemplateColumns: '1.5fr 0.8fr 0.8fr 1fr 1fr' }}>
                 <span>
-                  <span className={`badge badge-${p.stock_quantity < 20 ? 'danger' : 'success'}`}>
-                    {p.stock_quantity} units
+                  <div style={{ fontWeight: 500 }}>{p.name}</div>
+                  {p.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.description}</div>}
+                </span>
+                <span>${p.cost?.toFixed(2)}</span>
+                <span>${p.price?.toFixed(2)}</span>
+                <span>
+                  <span className={`badge badge-${p.stock < 20 ? 'danger' : 'success'}`}>
+                    {p.stock} units
                   </span>
                 </span>
                 <span style={{ textAlign: 'right' }}>
-                  <button
-                    className="btn-sm btn-outline"
-                    onClick={() => handleRestock(p.id)}
-                    id={`restock-${p.id}`}
-                    title="Restock 50 units"
-                  >
-                    <RotateCcw size={12} /> Restock
+                  <button className="btn-sm btn-outline" onClick={() => handleRestock(p.id)} id={`restock-${p.id}`}>
+                    <RotateCcw size={12} /> +50
                   </button>
                 </span>
               </div>
@@ -140,32 +150,33 @@ export default function Inventory() {
               <h3>Add Product</h3>
               <button className="icon-btn" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
+            {formError && <div className="login-error">{formError}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Product Name</label>
+                <label className="form-label">Product Name *</label>
                 <input type="text" required className="input-field" placeholder="e.g. Laptop Pro 15"
                   value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">SKU (optional)</label>
-                <input type="text" className="input-field" placeholder="Auto-generated if blank"
-                  value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} />
+                <label className="form-label">Description</label>
+                <input type="text" className="input-field" placeholder="Optional"
+                  value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="form-group">
-                <label className="form-label">Initial Stock</label>
-                <input type="number" required className="input-field" placeholder="100"
-                  value={form.stock_quantity} onChange={e => setForm({ ...form, stock_quantity: e.target.value })} />
+                <label className="form-label">Initial Stock *</label>
+                <input type="number" required min="0" className="input-field" placeholder="100"
+                  value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Cost Price ($)</label>
-                  <input type="number" required className="input-field" placeholder="0.00"
-                    value={form.cost_price} onChange={e => setForm({ ...form, cost_price: e.target.value })} />
+                  <label className="form-label">Cost ($) *</label>
+                  <input type="number" required step="0.01" min="0" className="input-field" placeholder="0.00"
+                    value={form.cost} onChange={e => setForm({ ...form, cost: e.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Sell Price ($)</label>
-                  <input type="number" required className="input-field" placeholder="0.00"
-                    value={form.selling_price} onChange={e => setForm({ ...form, selling_price: e.target.value })} />
+                  <label className="form-label">Price ($) *</label>
+                  <input type="number" required step="0.01" min="0" className="input-field" placeholder="0.00"
+                    value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
                 </div>
               </div>
               <button type="submit" className="btn" style={{ width: '100%' }}>Add to Inventory</button>

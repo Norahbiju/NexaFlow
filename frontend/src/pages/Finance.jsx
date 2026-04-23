@@ -7,28 +7,38 @@ export default function Finance() {
   const [form, setForm] = useState({ amount: '', type: 'income', category: '', description: '' });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState('');
+  const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
     get('/finance/transactions')
       .then(r => r.ok && r.json())
       .then(d => d && setTransactions(d))
-      .catch(() => {})
+      .catch(() => setFetchError('Failed to load transactions.'))
       .finally(() => setLoading(false));
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await post('/finance/transactions', {
-      amount: parseFloat(form.amount),
-      type: form.type,
-      category: form.category,
-      description: form.description,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setTransactions(prev => [data, ...prev]);
-      setForm({ amount: '', type: 'income', category: '', description: '' });
-      setShowForm(false);
+    setFormError('');
+    try {
+      const res = await post('/finance/transactions', {
+        amount: parseFloat(form.amount),
+        type: form.type,
+        category: form.category,
+        description: form.description || null,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(prev => [data, ...prev]);
+        setForm({ amount: '', type: 'income', category: '', description: '' });
+        setShowForm(false);
+      } else {
+        const err = await res.json();
+        setFormError(err.detail || `Error ${res.status}: Failed to add transaction.`);
+      }
+    } catch (e) {
+      setFormError('Network error. Is the backend running?');
     }
   };
 
@@ -42,13 +52,13 @@ export default function Finance() {
           <h1>Finance Management</h1>
           <p>Record and track all financial transactions.</p>
         </div>
-        <button className="btn" onClick={() => setShowForm(true)} id="add-transaction-btn">
+        <button className="btn" onClick={() => { setShowForm(true); setFormError(''); }} id="add-transaction-btn">
           <Plus size={16} /> Add Transaction
         </button>
       </div>
 
       {/* Summary strip */}
-      <div className="finance-summary">
+      {fetchError && <div className="alert-banner">{fetchError}</div>}
         <div className="finance-summary-item">
           <span>Net Balance</span>
           <strong style={{ color: total >= 0 ? 'var(--success)' : 'var(--danger)' }}>
@@ -118,6 +128,7 @@ export default function Finance() {
               <h3>Add Transaction</h3>
               <button className="icon-btn" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
+            {formError && <div className="login-error">{formError}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Type</label>

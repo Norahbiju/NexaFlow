@@ -7,6 +7,7 @@ export default function Invoices() {
   const [form, setForm] = useState({ client_name: '', amount: '', due_date: '' });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     get('/invoice/invoices')
@@ -18,16 +19,24 @@ export default function Invoices() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await post('/invoice/invoices', {
-      client_name: form.client_name,
-      amount: parseFloat(form.amount),
-      due_date: form.due_date,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setInvoices(prev => [data, ...prev]);
-      setForm({ client_name: '', amount: '', due_date: '' });
-      setShowForm(false);
+    setFormError('');
+    try {
+      const res = await post('/invoice/invoices', {
+        client_name: form.client_name,
+        amount: parseFloat(form.amount),
+        due_date: form.due_date,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInvoices(prev => [data, ...prev]);
+        setForm({ client_name: '', amount: '', due_date: '' });
+        setShowForm(false);
+      } else {
+        const err = await res.json();
+        setFormError(err.detail || `Error ${res.status}: Failed to create invoice.`);
+      }
+    } catch (e) {
+      setFormError('Network error. Is the backend running?');
     }
   };
 
@@ -53,7 +62,7 @@ export default function Invoices() {
           <h1>Invoice Tracking</h1>
           <p>Manage client invoices and receivables.</p>
         </div>
-        <button className="btn" onClick={() => setShowForm(true)} id="create-invoice-btn">
+        <button className="btn" onClick={() => { setShowForm(true); setFormError(''); }} id="create-invoice-btn">
           <Plus size={16} /> Create Invoice
         </button>
       </div>
@@ -131,6 +140,7 @@ export default function Invoices() {
               <h3>Create Invoice</h3>
               <button className="icon-btn" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
+            {formError && <div className="login-error">{formError}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Client Name</label>

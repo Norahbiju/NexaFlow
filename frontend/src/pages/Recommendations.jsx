@@ -2,13 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Lightbulb, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { get } from '../utils/api';
 
-const mockRecs = [
-  { id: 1, priority: 'High', message: 'Cash burn rate is 23% above normal. Consider reducing discretionary spending this month.', category: 'Cash Flow' },
-  { id: 2, priority: 'Medium', message: '3 invoices are overdue by 30+ days. Follow up with clients to improve receivables.', category: 'Invoices' },
-  { id: 3, priority: 'Low', message: 'Inventory stock for "Product A" will be depleted in 12 days at current rate.', category: 'Inventory' },
-  { id: 4, priority: 'Medium', message: 'Consider renegotiating supplier terms — current margins are below industry average.', category: 'Finance' },
-];
-
 const priorityConfig = {
   High: { color: '#ef4444', bg: '#fee2e2', icon: <AlertTriangle size={18} /> },
   Medium: { color: '#f59e0b', bg: '#fef3c7', icon: <AlertTriangle size={18} /> },
@@ -23,8 +16,8 @@ export default function Recommendations() {
   useEffect(() => {
     get('/recommendation/recommendations')
       .then(r => r.ok && r.json())
-      .then(d => setRecs(d && d.length ? d : mockRecs))
-      .catch(() => setRecs(mockRecs))
+      .then(d => setRecs(d || []))
+      .catch(() => setRecs([]))
       .finally(() => setLoading(false));
   }, []);
 
