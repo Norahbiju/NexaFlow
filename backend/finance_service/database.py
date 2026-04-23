@@ -2,10 +2,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Use environment variable or default to local docker-compose setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/nexaflow")
 
-engine = create_engine(DATABASE_URL)
+# pool_pre_ping=True ensures stale connections are detected and recycled
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
