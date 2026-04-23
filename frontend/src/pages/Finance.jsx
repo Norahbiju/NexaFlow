@@ -59,6 +59,7 @@ export default function Finance() {
 
       {/* Summary strip */}
       {fetchError && <div className="alert-banner">{fetchError}</div>}
+      <div className="finance-summary">
         <div className="finance-summary-item">
           <span>Net Balance</span>
           <strong style={{ color: total >= 0 ? 'var(--success)' : 'var(--danger)' }}>
@@ -82,6 +83,7 @@ export default function Finance() {
           </strong>
         </div>
       </div>
+
 
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: 16 }}>All Transactions</h3>
