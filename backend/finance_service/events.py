@@ -20,7 +20,6 @@ def publish_event(event_type: str, data: dict):
         try:
             channel = connection.channel()
             channel.exchange_declare(exchange='nexaflow_events', exchange_type='topic')
-            
             message = {
                 "event_type": event_type,
                 "data": data
@@ -31,5 +30,10 @@ def publish_event(event_type: str, data: dict):
                 body=json.dumps(message)
             )
             print(f"Published event: {event_type}")
+        except Exception as e:
+            print(f"Warning: Failed to publish event '{event_type}': {e}")
         finally:
-            connection.close()
+            try:
+                connection.close()
+            except Exception:
+                pass
