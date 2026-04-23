@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, X } from 'lucide-react';
-import { get, post, apiCall } from '../utils/api';
+import { get, post, apiCall, parseError } from '../utils/api';
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState([]);
@@ -8,12 +8,16 @@ export default function Invoices() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formError, setFormError] = useState('');
+  const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
     get('/invoice/invoices')
-      .then(r => r.ok && r.json())
-      .then(d => d && setInvoices(d))
-      .catch(() => {})
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(d => setInvoices(d || []))
+      .catch(e => setFetchError(`Failed to load invoices: ${e.message}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,8 +36,8 @@ export default function Invoices() {
         setForm({ client_name: '', amount: '', due_date: '' });
         setShowForm(false);
       } else {
-        const err = await res.json();
-        setFormError(err.detail || `Error ${res.status}: Failed to create invoice.`);
+        const msg = await parseError(res);
+        setFormError(msg);
       }
     } catch (e) {
       setFormError('Network error. Is the backend running?');
@@ -67,6 +71,7 @@ export default function Invoices() {
         </button>
       </div>
 
+      {fetchError && <div className="alert-banner">{fetchError}</div>}
       <div className="finance-summary">
         <div className="finance-summary-item">
           <span>Total Invoices</span>
@@ -85,6 +90,7 @@ export default function Invoices() {
           <strong style={{ color: 'var(--warning)' }}>${totalPending.toLocaleString()}</strong>
         </div>
       </div>
+
 
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: 16 }}>All Invoices</h3>

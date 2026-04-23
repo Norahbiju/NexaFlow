@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, X } from 'lucide-react';
-import { get, post } from '../utils/api';
+import { get, post, parseError } from '../utils/api';
 
 export default function Finance() {
   const [transactions, setTransactions] = useState([]);
@@ -34,8 +34,8 @@ export default function Finance() {
         setForm({ amount: '', type: 'income', category: '', description: '' });
         setShowForm(false);
       } else {
-        const err = await res.json();
-        setFormError(err.detail || `Error ${res.status}: Failed to add transaction.`);
+        const msg = await parseError(res);
+        setFormError(msg);
       }
     } catch (e) {
       setFormError('Network error. Is the backend running?');
